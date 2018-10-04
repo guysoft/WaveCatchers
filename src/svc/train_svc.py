@@ -13,6 +13,8 @@ from joblib import Parallel, delayed
 sys.path.append(os.path.realpath(os.path.join(os.path.dirname(__file__), "..",)))
 from get_time_series import get_file
 
+MODEL_PATH = os.path.realpath(os.path.join(os.path.dirname(__file__), "svc.pkl"))
+
 
 #FREQUENCY_UNIT_COUNT = 4432
 FREQUENCY_UNIT_COUNT = 1000
@@ -145,7 +147,7 @@ if __name__ == "__main__":
 
     import pickle
 
-    with open("/tmp/svc.pkl",  'wb') as f:
+    with open(MODEL_PATH,  'wb') as f:
         pickle.dump(clf, f)
 
     print("done")
