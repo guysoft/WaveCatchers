@@ -19,7 +19,7 @@ from get_time_series import get_file
 
 
 batch_size = 128
-epochs = 1
+epochs = 5
 
 max_num_features = 10
 pad_size = 1
@@ -50,26 +50,44 @@ def load_file(file_path, class_path):
     return x_data_from_file, labels.index(class_name)
 
 
-def load_dataset(path):
+def load_sound_file_for_network(file_path):
+    """
+    Loads a file for the network, should match what we are doing in the function load_dataset and load_file
+    :param file_path:
+    :return:
+    """
+    # Load file, just give some label
+    data = load_file(file_path, labels[0])[0]
+    x_data = np.zeros((1, FREQUENCY_UNIT_COUNT))
+    # import code; code.interact(local=dict(globals(), **locals()))
 
+    x_data[0] = np.array(data[1][:min(FREQUENCY_UNIT_COUNT, len(data[1]))])
+
+    return_value =  np.reshape(x_data, (x_data.shape[0], x_data.shape[1], 1))
+    print(return_value.shape)
+    return return_value
+
+def load_dataset(path):
+    outputs = []
     print("Loading dataset" + str(path))
     for class_path in os.listdir(path):
         class_path = os.path.join(path, class_path)
         if os.path.isdir(class_path):
             #for file_path in os.listdir(class_path):
-            outputs = Parallel(n_jobs=4, backend="threading")(delayed(load_file)(file_path, class_path)
+            out = Parallel(n_jobs=4, backend="threading")(delayed(load_file)(file_path, class_path)
                                                               for file_path in os.listdir(class_path))
+            outputs += out
 
-            # Just arrange this stuff back
-            x_data = np.zeros((len(outputs), FREQUENCY_UNIT_COUNT))
-            y_data = np.zeros(len(outputs))
 
-            #import code; code.interact(local=dict(globals(), **locals()))
+    # Just arrange this stuff back
+    x_data = np.zeros((len(outputs), FREQUENCY_UNIT_COUNT))
+    y_data = np.zeros(len(outputs))
 
-            for i, output in enumerate(outputs):
-                # Dump wave data in to array, if its too long cut it in to WAV_LENGTH
-                x_data[i] = np.array(output[0][1][:min(FREQUENCY_UNIT_COUNT, len(output[0][1]))])
-                y_data[i] = output[1]
+    for i, output in enumerate(outputs):
+        # Dump wave data in to array, if its too long cut it in to WAV_LENGTH
+        #import code; code.interact(local=dict(globals(), **locals()))
+        x_data[i] = np.array(output[0][1][:min(FREQUENCY_UNIT_COUNT, len(output[0][1]))])
+        y_data[i] = output[1]
     return x_data, y_data
 
 
@@ -101,15 +119,21 @@ if __name__ == "__main__":
     x_train = x_data
     y_train = y_data
 
+    # Add all of dataset 4 as validation, sperate recording from dataset 1
+    x_train = np.concatenate([x_train, x_data_valid])
+    y_train = np.concatenate([y_train, y_data_valid])
+
     x_train, x_valid, y_train, y_valid = train_test_split(x_train, y_train,
                                                           test_size=0.1, random_state=2017)
 
-    # Add all of dataset 4 as validation, sperate recording from dataset 1
-    # x_valid = np.concatenate([x_valid, x_data_valid])
-    # y_valid = np.concatenate([y_valid, y_data_valid])
 
-    x_valid = x_data_valid
-    y_valid = y_data_valid
+
+    #x_valid = x_data_valid
+    #y_valid = y_data_valid
+
+
+
+
 
     # Load dataset to network for training
 
@@ -130,12 +154,20 @@ if __name__ == "__main__":
 
 
     print(x_train.shape, y_train.shape)
+    # np.save("/tmp/yay.pkl", x_valid)
+    keras.callbacks.ModelCheckpoint(MODEL_PATH, monitor='val_loss', verbose=1, save_best_only=False,
+                                    save_weights_only=False, mode='auto', period=1)
 
     history = model.fit(x_train, y_train,
                         batch_size=batch_size,
                         epochs=epochs,
                         verbose=1,
                         validation_data=(x_valid, y_valid),
+                        class_weight={
+    0: 50.0,
+    1: 1.0,
+    2: 0
+},
                         shuffle=True)
 
     gc.collect()
