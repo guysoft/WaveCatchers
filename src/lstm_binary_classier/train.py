@@ -32,6 +32,9 @@ FREQUENCY_UNIT_COUNT = 4432
 dataset_path1 = os.path.realpath(os.path.join(os.path.dirname(__file__), "..", "dataset", "dataset1"))
 dataset_path4 = os.path.realpath(os.path.join(os.path.dirname(__file__), "..", "dataset", "dataset4"))
 
+out_path = os.path.realpath(os.path.join(os.path.dirname(__file__)))
+MODEL_PATH = os.path.join(out_path, 'lstm_model_pickle.hf5')
+
 labels = ["up", "down", "silence"]
 
 def load_file(file_path, class_path):
@@ -70,37 +73,6 @@ def load_dataset(path):
     return x_data, y_data
 
 
-x_data, y_data = load_dataset(dataset_path1)
-x_data_valid, y_data_valid = load_dataset(dataset_path4)
-
-
-print('Total number of samples:', len(x_data))
-
-x_train = x_data
-y_train = y_data
-
-x_train, x_valid, y_train, y_valid = train_test_split(x_train, y_train,
-                                                      test_size=0.1, random_state=2017)
-
-
-# Add all of dataset 4 as validation, sperate recording from dataset 1
-x_valid = np.concatenate([x_valid, x_data_valid])
-y_valid = np.concatenate([y_valid, y_data_valid])
-
-
-# Number of classes to train
-num_classes = len(labels)
-
-y_train = keras.utils.to_categorical(y_train, num_classes)
-y_valid = keras.utils.to_categorical(y_valid, num_classes)
-
-print("current x train shape:" + str(x_train.shape))
-x_train = np.reshape(x_train, (x_train.shape[0], x_train.shape[1], 1))
-x_valid = np.reshape(x_valid, (x_valid.shape[0], x_valid.shape[1], 1))
-print("current x train shape2:" + str(x_train.shape))
-# y_train= np.reshape(y_train,(y_train.shape[0],y_train.shape[1],1))
-# y_valid = np.reshape(y_valid,(y_valid.shape[0],y_valid.shape[1],1))
-gc.collect()
 
 # model.add(Dense(1, activation='sigmoid'))
 
@@ -115,10 +87,47 @@ model.add(Dense(len(labels), activation='softmax'))
 
 model.summary()
 
+model.compile(loss='categorical_crossentropy',
+              optimizer=RMSprop(),
+              metrics=['accuracy'])
+
 if __name__ == "__main__":
-    model.compile(loss='categorical_crossentropy',
-                  optimizer=RMSprop(),
-                  metrics=['accuracy'])
+    # Load dataset
+    x_data, y_data = load_dataset(dataset_path1)
+    x_data_valid, y_data_valid = load_dataset(dataset_path4)
+
+    print('Total number of samples:', len(x_data))
+
+    x_train = x_data
+    y_train = y_data
+
+    x_train, x_valid, y_train, y_valid = train_test_split(x_train, y_train,
+                                                          test_size=0.1, random_state=2017)
+
+    # Add all of dataset 4 as validation, sperate recording from dataset 1
+    # x_valid = np.concatenate([x_valid, x_data_valid])
+    # y_valid = np.concatenate([y_valid, y_data_valid])
+
+    x_valid = x_data_valid
+    y_valid = y_data_valid
+
+    # Load dataset to network for training
+
+    # Number of classes to train
+    num_classes = len(labels)
+
+    y_train = keras.utils.to_categorical(y_train, num_classes)
+    y_valid = keras.utils.to_categorical(y_valid, num_classes)
+
+    print("current x train shape:" + str(x_train.shape))
+    x_train = np.reshape(x_train, (x_train.shape[0], x_train.shape[1], 1))
+    x_valid = np.reshape(x_valid, (x_valid.shape[0], x_valid.shape[1], 1))
+    print("current x train shape2:" + str(x_train.shape))
+    # y_train= np.reshape(y_train,(y_train.shape[0],y_train.shape[1],1))
+    # y_valid = np.reshape(y_valid,(y_valid.shape[0],y_valid.shape[1],1))
+    gc.collect()
+
+
 
     print(x_train.shape, y_train.shape)
 
@@ -130,8 +139,6 @@ if __name__ == "__main__":
                         shuffle=True)
 
     gc.collect()
-
-    out_path = os.path.realpath(os.path.join(os.path.dirname(__file__)))
 
     """
     score = model.evaluate(x_valid, y_valid, verbose=0)
@@ -169,8 +176,9 @@ if __name__ == "__main__":
     df_erros.to_csv(os.path.join(out_path, 'errors_lstm.csv'), index=False)
     """
 
-    model.save_weights(os.path.join(out_path, 'lstm_model'))
+    print("Saving model")
+    # model.save_weights(MODEL_PATH)
+    model.save(MODEL_PATH)
 
-    print("predict needs to be implemented")
-    # print(model.predict(np.array(x_valid[0])))
+
 
