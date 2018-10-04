@@ -6,10 +6,17 @@ def my_fft(path):
     x, sampleRate = sf.read(path)
     N = len(x)
     
-    x = x/np.max(x) # Normalize
-    f = np.arange(N//2)*sampleRate
+    cutoff = 60 #Hz. Cutoff frequency to remove electricity noise
+    
+    # Get frequency vector, filtered
+    f = np.arange(N//2)*sampleRate/N
+    index = [i for i,e in enumerate(f) if (e > cutoff) and (i < N//2)]
+    f = f[index]
+    
+    # Get FFT complex amplitudes, normalized and filtered
     X = np.fft.fft(x)
-    X = X[0:N//2]
+    X = X[index]
+    X = X/np.max(np.abs(X))
     
     return f, X;
 
@@ -26,9 +33,9 @@ def plot_compare_fft(path_up, path_down):
     Y2 = multiplied_fft(X2)
     plt.plot(f2,Y2)
     
-    plt.show();
+    plt.show()
     
-    
+
     
     
     
