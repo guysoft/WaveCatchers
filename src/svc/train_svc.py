@@ -56,7 +56,7 @@ def load_sound_file_for_network(file_path):
     data = load_file(file_path, labels[0])[0]
     x_data = np.zeros((1, FREQUENCY_UNIT_COUNT))
     # import code; code.interact(local=dict(globals(), **locals()))
-
+    
     x_data[0] = np.array(data[1][:min(FREQUENCY_UNIT_COUNT, len(data[1]))])
 
     return_value =  np.reshape(x_data, (x_data.shape[0], x_data.shape[1], 1))
@@ -76,13 +76,19 @@ def load_dataset(path):
             outputs += out
 
     # Just arrange this stuff back
-    x_data = np.zeros((len(outputs), FREQUENCY_UNIT_COUNT))
+    x_data = np.zeros((len(outputs), 3*FREQUENCY_UNIT_COUNT))
     y_data = np.zeros(len(outputs))
 
     for i, output in enumerate(outputs):
         # Dump wave data in to array, if its too long cut it in to WAV_LENGTH
-        #import code; code.interact(local=dict(globals(), **locals()))
-        x_data[i] = np.array(output[0][1][:min(FREQUENCY_UNIT_COUNT, len(output[0][1]))])
+        # Do this also to frequency vector and to phase
+        good_length = min(FREQUENCY_UNIT_COUNT, len(output[0][1]))
+        freq = output[0][0][:good_length]
+        amplitude = np.abs(output[0][1])[:good_length]
+        phase = np.angle(output[0][1])[:good_length]
+    
+#        import code; code.interact(local=dict(globals(), **locals()))
+        x_data[i] = np.concatenate((freq,amplitude,phase))
         y_data[i] = output[1]
     return x_data, y_data
 
@@ -139,8 +145,8 @@ if __name__ == "__main__":
     LinearSVC(C=1.0, dual=True, fit_intercept=True,
               intercept_scaling=1, loss='squared_hinge', max_iter=1000,
               multi_class='ovr', penalty='l2', random_state=0, tol=1e-05, verbose=0, class_weight="balanced")
-    print(clf.coef_)
-    print(clf.intercept_)
+#    print(clf.coef_)
+#    print(clf.intercept_)
     y_pred = clf.predict(x_valid)
 
     print(classification_report(y_valid, y_pred))
