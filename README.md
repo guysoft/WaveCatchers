@@ -1,4 +1,5 @@
-# thedoorks
+# Wave Catches 
+## תופסים גלים
 Data Hack Hackathon 2018 project to direction of violin bow (opefully in realtime)
 
 
