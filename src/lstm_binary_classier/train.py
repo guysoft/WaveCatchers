@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Based on https://www.kaggle.com/alphasis/xgboost-with-context-label-data-acc-99-637
 # Make sure you have dataset/dataset1 and dataset/dataset2 in the right place in the folder above where this file is
 
@@ -6,6 +6,7 @@ from __future__ import print_function
 import sys
 import numpy as np
 import os
+os.environ['KERAS_BACKEND'] = 'tensorflow'
 import gc
 from sklearn.model_selection import train_test_split
 import keras
@@ -18,8 +19,9 @@ sys.path.append(os.path.realpath(os.path.join(os.path.dirname(__file__), "..",))
 from get_time_series import get_file
 
 
+
 batch_size = 128
-epochs = 5
+epochs = 10
 
 max_num_features = 10
 pad_size = 1
@@ -31,6 +33,7 @@ FREQUENCY_UNIT_COUNT = 4432
 
 dataset_path1 = os.path.realpath(os.path.join(os.path.dirname(__file__), "..", "dataset", "dataset1"))
 dataset_path4 = os.path.realpath(os.path.join(os.path.dirname(__file__), "..", "dataset", "dataset4"))
+dataset_path5 = os.path.realpath(os.path.join(os.path.dirname(__file__), "..", "dataset", "dataset5"))
 
 out_path = os.path.realpath(os.path.join(os.path.dirname(__file__)))
 MODEL_PATH = os.path.join(out_path, 'lstm_model_pickle.hf5')
@@ -84,9 +87,15 @@ def load_dataset(path):
     y_data = np.zeros(len(outputs))
 
     for i, output in enumerate(outputs):
+        good_length = min(FREQUENCY_UNIT_COUNT, len(output[0][1]))
+        amplitude = np.abs(output[0][1])[:good_length]
+        phase = np.angle(output[0][1])[:good_length]
+
+        ampiphase = np.einsum('i,j->ij', amplitude, phase).ravel()
+        
         # Dump wave data in to array, if its too long cut it in to WAV_LENGTH
         #import code; code.interact(local=dict(globals(), **locals()))
-        x_data[i] = np.array(output[0][1][:min(FREQUENCY_UNIT_COUNT, len(output[0][1]))])
+        x_data[i] = np.array(ampiphase[:min(FREQUENCY_UNIT_COUNT, len(ampiphase))])
         y_data[i] = output[1]
     return x_data, y_data
 
@@ -113,6 +122,7 @@ if __name__ == "__main__":
     # Load dataset
     x_data, y_data = load_dataset(dataset_path1)
     x_data_valid, y_data_valid = load_dataset(dataset_path4)
+    x_data5, y_data5 = load_dataset(dataset_path5)
 
     print('Total number of samples:', len(x_data))
 
@@ -120,8 +130,8 @@ if __name__ == "__main__":
     y_train = y_data
 
     # Add all of dataset 4 as validation, sperate recording from dataset 1
-    x_train = np.concatenate([x_train, x_data_valid])
-    y_train = np.concatenate([y_train, y_data_valid])
+    x_train = np.concatenate([x_train, x_data_valid, x_data5])
+    y_train = np.concatenate([y_train, y_data_valid, y_data5])
 
     x_train, x_valid, y_train, y_valid = train_test_split(x_train, y_train,
                                                           test_size=0.1, random_state=2017)
@@ -164,9 +174,9 @@ if __name__ == "__main__":
                         verbose=1,
                         validation_data=(x_valid, y_valid),
                         class_weight={
-    0: 50.0,
+    0: 1.0,
     1: 1.0,
-    2: 0
+    2: 1.0
 },
                         shuffle=True)
 
